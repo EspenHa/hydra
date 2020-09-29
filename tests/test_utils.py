@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import pytest
-from omegaconf import DictConfig, OmegaConf, ListConfig
+from omegaconf import DictConfig, ListConfig, OmegaConf
 
 from hydra import utils
 from hydra._internal.utils import _convert_container_targets_to_strings
@@ -33,15 +33,15 @@ from tests import (
     Parameters,
     Rotation,
     RotationConf,
+    SimpleClass,
+    SimpleClassDefaultPrimitiveConf,
+    SimpleClassNonPrimitiveConf,
+    SimpleClassPrimitiveConf,
     Tree,
     TreeConf,
     UntypedPassthroughClass,
     UntypedPassthroughConf,
     module_function,
-    SimpleClass,
-    SimpleClassPrimitiveConf,
-    SimpleClassNonPrimitiveConf,
-    SimpleClassDefaultPrimitiveConf,
 )
 
 
@@ -856,6 +856,8 @@ def test_primitive_params_override(
     else:
         ret = utils.instantiate(input_cfg.obj)
 
+    expected_list: Any
+    expected_dict: Any
     if expected_primitive is True:
         expected_list = list
         expected_dict = dict
@@ -871,11 +873,11 @@ def test_primitive_params_override(
 
 
 @pytest.mark.parametrize(  # type: ignore
-    "primitive",
+    "primitive,expected_primitive",
     [
-        pytest.param(None, id="p=unspecified"),
-        pytest.param(False, id="p=false"),
-        pytest.param(True, id="p=true"),
+        pytest.param(None, True, id="p=unspecified"),
+        pytest.param(False, False, id="p=false"),
+        pytest.param(True, True, id="p=true"),
     ],
 )
 @pytest.mark.parametrize(  # type: ignore
@@ -899,7 +901,9 @@ def test_primitive_params_override(
         ),
     ],
 )
-def test_primitive_params(input_: Any, expected: Any, primitive: Any):
+def test_primitive_params(
+    input_: Any, expected: Any, primitive: Any, expected_primitive: bool
+):
     cfg = OmegaConf.create(input_)
     ret = utils.instantiate(
         cfg.obj,
@@ -908,16 +912,14 @@ def test_primitive_params(input_: Any, expected: Any, primitive: Any):
         },
     )
 
-    if primitive:
-        expected_list = list
-        expected_dict = dict
+    if expected_primitive:
+        assert isinstance(ret.a.a, dict)
+        assert isinstance(ret.a.b, list)
     else:
-        expected_list = ListConfig
-        expected_dict = DictConfig
+        assert isinstance(ret.a.a, DictConfig)
+        assert isinstance(ret.a.b, ListConfig)
 
     assert ret.a == expected
-    assert isinstance(ret.a.a, expected_dict)
-    assert isinstance(ret.a.b, expected_list)
 
 
 @pytest.mark.parametrize(  # type: ignore
@@ -958,18 +960,14 @@ def test_primitive_params(input_: Any, expected: Any, primitive: Any):
         ),
     ],
 )
-def test_primitive_in_config(input_, is_primitive, expected):
+def test_primitive_in_config(input_: Any, is_primitive: bool, expected: Any) -> None:
     cfg = OmegaConf.create(input_)
-    if is_primitive:
-        expected_list = list
-        expected_dict = dict
-    else:
-        expected_list = ListConfig
-        expected_dict = DictConfig
     ret = utils.instantiate(cfg.obj)
     assert ret == expected
-    assert isinstance(ret.a, expected_dict)
-    assert isinstance(ret.b, expected_list)
 
-
-# TODO: change default of primitive to True
+    if is_primitive:
+        assert isinstance(ret.a, dict)
+        assert isinstance(ret.b, list)
+    else:
+        assert isinstance(ret.a, DictConfig)
+        assert isinstance(ret.b, ListConfig)

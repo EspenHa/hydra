@@ -615,10 +615,18 @@ def _get_target_type(config: Any, kwargs: Any) -> Union[type, Callable[..., Any]
 
 
 def _is_primitive(d: Any) -> bool:
-    if "_primitive_" in d:
-        return d.pop("_primitive_")
     # primitive by default
-    return True
+    ret = True
+    if "_primitive_" in d:
+        ret = d.pop("_primitive_")
+        if ret is None:
+            ret = True
+        else:
+            if not isinstance(ret, bool):
+                raise InstantiationException(
+                    f"_primitive_ must be a bool (got `{type(ret).__name__}`)"
+                )
+    return ret
 
 
 def _get_kwargs(
