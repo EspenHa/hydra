@@ -3,10 +3,10 @@ import copy
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pytest
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, ListConfig
 
 from hydra import utils
 from hydra._internal.utils import _convert_container_targets_to_strings
@@ -38,6 +38,10 @@ from tests import (
     UntypedPassthroughClass,
     UntypedPassthroughConf,
     module_function,
+    SimpleClass,
+    SimpleClassPrimitiveConf,
+    SimpleClassNonPrimitiveConf,
+    SimpleClassDefaultPrimitiveConf,
 )
 
 
@@ -215,6 +219,7 @@ def test_class_instantiate_omegaconf_node() -> Any:
     conf = OmegaConf.structured(
         {
             "_target_": "tests.AClass",
+            "_primitive_": False,
             "b": 200,
             "c": {"x": 10, "y": "${b}"},
         }
@@ -292,7 +297,13 @@ def test_instantiate_adam_conf() -> None:
 
     adam_params = Parameters([1, 2, 3])
     res = utils.instantiate(AdamConf(lr=0.123), params=adam_params)
-    assert res == Adam(lr=0.123, params=adam_params)
+    expected = Adam(lr=0.123, params=adam_params)
+    assert res.params == expected.params
+    assert res.lr == expected.lr
+    assert list(res.betas) == list(expected.betas)  # OmegaConf converts tuples to lists
+    assert res.eps == expected.eps
+    assert res.weight_decay == expected.weight_decay
+    assert res.amsgrad == expected.amsgrad
 
 
 def test_targetconf_deprecated() -> None:
@@ -784,3 +795,181 @@ def test_override_target(input_conf: Any, passthrough: Any, expected: Any) -> No
 def test_convert_target_to_string(input_: Any, expected: Any) -> None:
     _convert_container_targets_to_strings(input_)
     assert input_ == expected
+
+
+@pytest.mark.parametrize(  # type: ignore
+    "primitive,expected_primitive",
+    [
+        pytest.param(None, True, id="primitive=unspecified"),
+        pytest.param(False, False, id="primitive=false"),
+        pytest.param(True, True, id="primitive=true"),
+    ],
+)
+@pytest.mark.parametrize(  # type: ignore
+    "input_,expected",
+    [
+        pytest.param(
+            {
+                "obj": {
+                    "_target_": "tests.AClass",
+                    "a": {"foo": "bar"},
+                    "b": OmegaConf.create({"foo": "bar"}),
+                    "c": [1, 2, 3],
+                    "d": OmegaConf.create([1, 2, 3]),
+                },
+            },
+            AClass(
+                a={"foo": "bar"},
+                b={"foo": "bar"},
+                c=[1, 2, 3],
+                d=[1, 2, 3],
+            ),
+            id="simple",
+        ),
+        pytest.param(
+            {
+                "value": 99,
+                "obj": {
+                    "_target_": "tests.AClass",
+                    "a": {"foo": "${value}"},
+                    "b": OmegaConf.create({"foo": "${value}"}),
+                    "c": [1, "${value}"],
+                    "d": OmegaConf.create([1, "${value}"]),
+                },
+            },
+            AClass(
+                a={"foo": 99},
+                b={"foo": 99},
+                c=[1, 99],
+                d=[1, 99],
+            ),
+            id="interpolation",
+        ),
+    ],
+)
+def test_primitive_params_override(
+    primitive: Optional[bool], expected_primitive: bool, input_: Any, expected: Any
+):
+    input_cfg = OmegaConf.create(input_)
+    if primitive is not None:
+        ret = utils.instantiate(input_cfg.obj, _primitive_=primitive)
+    else:
+        ret = utils.instantiate(input_cfg.obj)
+
+    if expected_primitive is True:
+        expected_list = list
+        expected_dict = dict
+    else:
+        expected_list = ListConfig
+        expected_dict = DictConfig
+
+    assert ret == expected
+    assert isinstance(ret.a, expected_dict)
+    assert isinstance(ret.b, expected_dict)
+    assert isinstance(ret.c, expected_list)
+    assert isinstance(ret.d, expected_list)
+
+
+@pytest.mark.parametrize(  # type: ignore
+    "primitive",
+    [
+        pytest.param(None, id="p=unspecified"),
+        pytest.param(False, id="p=false"),
+        pytest.param(True, id="p=true"),
+    ],
+)
+@pytest.mark.parametrize(  # type: ignore
+    "input_,expected",
+    [
+        pytest.param(
+            {
+                "value": 99,
+                "obj": {
+                    "_target_": "tests.SimpleClass",
+                    "a": {
+                        "_target_": "tests.SimpleClass",
+                        "a": {"foo": "${value}"},
+                        "b": [1, "${value}"],
+                    },
+                    "b": None,
+                },
+            },
+            SimpleClass(a={"foo": 99}, b=[1, 99]),
+            id="simple",
+        ),
+    ],
+)
+def test_primitive_params(input_: Any, expected: Any, primitive: Any):
+    cfg = OmegaConf.create(input_)
+    ret = utils.instantiate(
+        cfg.obj,
+        **{
+            "a": {"_primitive_": primitive},
+        },
+    )
+
+    if primitive:
+        expected_list = list
+        expected_dict = dict
+    else:
+        expected_list = ListConfig
+        expected_dict = DictConfig
+
+    assert ret.a == expected
+    assert isinstance(ret.a.a, expected_dict)
+    assert isinstance(ret.a.b, expected_list)
+
+
+@pytest.mark.parametrize(  # type: ignore
+    "input_,is_primitive,expected",
+    [
+        pytest.param(
+            {
+                "value": 99,
+                "obj": SimpleClassPrimitiveConf(
+                    a={"foo": "${value}"}, b=[1, "${value}"]
+                ),
+            },
+            True,
+            SimpleClass(a={"foo": 99}, b=[1, 99]),
+            id="primitive_specified_true",
+        ),
+        pytest.param(
+            {
+                "value": 99,
+                "obj": SimpleClassNonPrimitiveConf(
+                    a={"foo": "${value}"}, b=[1, "${value}"]
+                ),
+            },
+            False,
+            SimpleClass(a={"foo": 99}, b=[1, 99]),
+            id="primitive_specified_false",
+        ),
+        pytest.param(
+            {
+                "value": 99,
+                "obj": SimpleClassDefaultPrimitiveConf(
+                    a={"foo": "${value}"}, b=[1, "${value}"]
+                ),
+            },
+            True,
+            SimpleClass(a={"foo": 99}, b=[1, 99]),
+            id="default_behavior",
+        ),
+    ],
+)
+def test_primitive_in_config(input_, is_primitive, expected):
+    cfg = OmegaConf.create(input_)
+    if is_primitive:
+        expected_list = list
+        expected_dict = dict
+    else:
+        expected_list = ListConfig
+        expected_dict = DictConfig
+    ret = utils.instantiate(cfg.obj)
+    assert ret == expected
+    assert isinstance(ret.a, expected_dict)
+    assert isinstance(ret.b, expected_list)
+
+
+# TODO: change default of primitive to True

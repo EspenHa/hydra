@@ -267,3 +267,32 @@ class MappingConf:
 
     def __init__(self, dictionary: Optional[Dict[str, "MappingConf"]] = None):
         self.dictionary = dictionary
+
+
+@dataclass
+class SimpleClass:
+    a: Any = None
+    b: Any = None
+
+
+@dataclass
+class SimpleClassPrimitiveConf:
+    _target_: str = "tests.SimpleClass"
+    _primitive_: bool = True
+    a: Any = None
+    b: Any = None
+
+
+@dataclass
+class SimpleClassNonPrimitiveConf:
+    _target_: str = "tests.SimpleClass"
+    _primitive_: bool = False
+    a: Any = None
+    b: Any = None
+
+
+@dataclass
+class SimpleClassDefaultPrimitiveConf:
+    _target_: str = "tests.SimpleClass"
+    a: Any = None
+    b: Any = None

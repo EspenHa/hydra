@@ -614,6 +614,13 @@ def _get_target_type(config: Any, kwargs: Any) -> Union[type, Callable[..., Any]
         raise InstantiationException(f"Unsupported target type : {type(target)}")
 
 
+def _is_primitive(d: Any) -> bool:
+    if "_primitive_" in d:
+        return d.pop("_primitive_")
+    # primitive by default
+    return True
+
+
 def _get_kwargs(
     config: Union[DictConfig, ListConfig],
     **kwargs: Any,

@@ -12,6 +12,7 @@ from hydra._internal.utils import (
     _convert_target_to_string,
     _get_kwargs,
     _get_target_type,
+    _is_primitive,
     _locate,
 )
 from hydra.core.hydra_config import HydraConfig
@@ -77,6 +78,17 @@ def instantiate(config: Any, *args: Any, **kwargs: Any) -> Any:
     try:
         config._set_flag("allow_objects", True)
         final_kwargs = _get_kwargs(config, **kwargs)
+        primitive = _is_primitive(final_kwargs)
+        if primitive:
+            # convert OmegaConf containers to primitive containers
+            # This improves the performance of the instantiated object in some cases
+            converted = {}
+            for k, v in final_kwargs.items():
+                if OmegaConf.is_config(v):
+                    v = OmegaConf.to_container(v, resolve=True)
+                converted[k] = v
+            final_kwargs = converted
+
         return target(*args, **final_kwargs)
     except Exception as e:
         raise type(e)(
