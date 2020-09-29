@@ -849,7 +849,7 @@ def test_convert_target_to_string(input_: Any, expected: Any) -> None:
 )
 def test_primitive_params_override(
     primitive: Optional[bool], expected_primitive: bool, input_: Any, expected: Any
-):
+) -> None:
     input_cfg = OmegaConf.create(input_)
     if primitive is not None:
         ret = utils.instantiate(input_cfg.obj, _primitive_=primitive)
