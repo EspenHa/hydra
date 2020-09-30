@@ -218,7 +218,7 @@ def test_interpolation_accessing_parent(
     assert obj == expected
 
 
-def test_interpolation_is_live_in_instantiated_object():
+def test_interpolation_is_live_in_instantiated_object() -> None:
     """
     Interpolations in instantiated objects are live config objects but not for primitive objects.
     """
@@ -1054,7 +1054,7 @@ def test_primitive_in_config(input_: Any, is_primitive: bool, expected: Any) -> 
         assert isinstance(ret.b, ListConfig)
 
 
-def test_nested_dataclass_with_primitive():
+def test_nested_dataclass_with_primitive() -> None:
     # dict
     cfg = OmegaConf.structured(NestedConf)
     ret = utils.instantiate(cfg)
