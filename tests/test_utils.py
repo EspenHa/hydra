@@ -218,6 +218,35 @@ def test_interpolation_accessing_parent(
     assert obj == expected
 
 
+def test_interpolation_is_live_in_instantiated_object():
+    """
+    Interpolations in instantiated objects are live config objects but not for primitive objects.
+    """
+    cfg = OmegaConf.create(
+        {
+            "node": {
+                "_target_": "tests.AClass",
+                "_primitive_": False,
+                "a": "${value}",
+                "b": {"x": "${value}"},
+                "c": 30,
+                "d": 40,
+            },
+            "value": 99,
+        }
+    )
+    obj = utils.instantiate(cfg.node)
+    assert obj.a == 99
+    assert obj.b.x == 99
+
+    cfg.value = 3.14
+
+    # interpolation is not live for primitive objects
+    assert obj.a == 99  # unchanged
+    # but is live for config objects
+    assert obj.b.x == 3.14
+
+
 def test_class_instantiate_omegaconf_node() -> Any:
     conf = OmegaConf.structured(
         {

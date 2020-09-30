@@ -648,13 +648,14 @@ def _get_kwargs(
     config.merge_with(overrides)
 
     final_kwargs = OmegaConf.create(flags={"allow_objects": True})
+    final_kwargs._set_parent(config._get_parent())
     if recursive:
-        for k, v in config.items():
+        for k, v in config.items_ex(resolve=False):
             if _is_target(v):
                 final_kwargs[k] = instantiate(v)
             elif OmegaConf.is_dict(v) and not OmegaConf.is_none(v):
                 d = OmegaConf.create({}, flags={"allow_objects": True})
-                for key, value in v.items():
+                for key, value in v.items_ex(resolve=False):
                     if _is_target(value):
                         d[key] = instantiate(value)
                     elif OmegaConf.is_config(value):
@@ -681,7 +682,7 @@ def _get_kwargs(
                     v = None
                 final_kwargs[k] = v
     else:
-        for k, v in config.items():
+        for k, v in config.items_ex(resolve=False):
             final_kwargs[k] = v
 
     # final_kwargs._metadata.object_type = config._metadata.object_type

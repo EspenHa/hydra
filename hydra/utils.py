@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import logging.config
 import os
+import sys
 from pathlib import Path
 from typing import Any, Callable
 
@@ -87,9 +88,10 @@ def instantiate(config: Any, *args: Any, **kwargs: Any) -> Any:
             )
         return target(*args, **final_kwargs)
     except Exception as e:
+        # preserve the original exception backtrace
         raise type(e)(
             f"Error instantiating/calling '{_convert_target_to_string(target)}' : {e}"
-        )
+        ).with_traceback(sys.exc_info()[2])
 
 
 # Alias for instantiate
@@ -103,6 +105,7 @@ def get_class(path: str) -> type:
             raise ValueError(f"Located non-class in {path} : {type(cls).__name__}")
         return cls
     except Exception as e:
+        # TODO: preserve backtrace
         log.error(f"Error initializing class at {path} : {e}")
         raise e
 
@@ -114,6 +117,7 @@ def get_method(path: str) -> Callable[..., Any]:
             raise ValueError(f"Non callable object located : {type(cl).__name__}")
         return cl
     except Exception as e:
+        # TODO: preserve backtrace
         log.error(f"Error getting callable at {path} : {e}")
         raise e
 
