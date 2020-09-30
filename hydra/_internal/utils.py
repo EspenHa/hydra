@@ -662,6 +662,12 @@ def _get_kwargs(
                     else:
                         d[key] = value
                 final_kwargs[k] = d
+                # TODO:
+                # 1. Add test that needs this.
+                # 2. consider using merge_with
+                # 3. check if something similar is needed in list handling
+                # 4. Change default to current behavior
+                final_kwargs[k]._metadata.object_type = v._metadata.object_type
             elif OmegaConf.is_list(v):
                 lst = OmegaConf.create([], flags={"allow_objects": True})
                 for x in v:
