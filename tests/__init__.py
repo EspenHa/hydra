@@ -310,3 +310,10 @@ class SimpleClassDefaultPrimitiveConf:
     _target_: str = "tests.SimpleClass"
     a: Any = None
     b: Any = None
+
+
+@dataclass
+class NestedConf:
+    _target_: str = "tests.SimpleClass"
+    a: User = User(name="a", age=1)
+    b: User = User(name="b", age=2)

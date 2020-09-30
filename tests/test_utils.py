@@ -43,6 +43,8 @@ from tests import (
     UntypedPassthroughClass,
     UntypedPassthroughConf,
     module_function,
+    NestedConf,
+    User,
 )
 
 
@@ -220,7 +222,7 @@ def test_class_instantiate_omegaconf_node() -> Any:
     conf = OmegaConf.structured(
         {
             "_target_": "tests.AClass",
-            "_primitive_": False,
+            "_primitive_": False,  # TODO, ideally default will continue to work for this.
             "b": 200,
             "c": {"x": 10, "y": "${b}"},
         }
@@ -1021,3 +1023,12 @@ def test_primitive_in_config(input_: Any, is_primitive: bool, expected: Any) -> 
     else:
         assert isinstance(ret.a, DictConfig)
         assert isinstance(ret.b, ListConfig)
+
+
+def test_nested_dataclass_with_primitive():
+    cfg = OmegaConf.create(NestedConf)
+    ret = utils.instantiate(cfg)
+    assert isinstance(ret.a, DictConfig) and OmegaConf.get_type(ret.a) == User
+    assert isinstance(ret.b, DictConfig) and OmegaConf.get_type(ret.b) == User
+    expected = SimpleClass(a=User(name="a", age=1), b=User(name="b", age=2))
+    assert ret == expected
