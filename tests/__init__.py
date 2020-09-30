@@ -270,9 +270,23 @@ class MappingConf:
 
 
 @dataclass
+class SimpleDataClass:
+    a: Any = None
+    b: Any = None
+
+
 class SimpleClass:
     a: Any = None
     b: Any = None
+
+    def __init__(self, a: Any, b: Any) -> None:
+        self.a = a
+        self.b = b
+
+    def __eq__(self, other: Any) -> Any:
+        if isinstance(other, SimpleClass):
+            return self.a == other.a and self.b == other.b
+        return False
 
 
 @dataclass

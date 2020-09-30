@@ -37,6 +37,7 @@ from tests import (
     SimpleClassDefaultPrimitiveConf,
     SimpleClassNonPrimitiveConf,
     SimpleClassPrimitiveConf,
+    SimpleDataClass,
     Tree,
     TreeConf,
     UntypedPassthroughClass,
@@ -920,6 +921,55 @@ def test_primitive_params(
         assert isinstance(ret.a.b, ListConfig)
 
     assert ret.a == expected
+
+
+@pytest.mark.parametrize(  # type: ignore
+    "primitive,expected_primitive",
+    [
+        pytest.param(None, True, id="p=unspecified"),
+        pytest.param(False, False, id="p=false"),
+        pytest.param(True, True, id="p=true"),
+    ],
+)
+@pytest.mark.parametrize(  # type: ignore
+    "input_,expected",
+    [
+        pytest.param(
+            {
+                "value": 99,
+                "obj": {
+                    "_target_": "tests.SimpleDataClass",
+                    "a": {
+                        "_target_": "tests.SimpleDataClass",
+                        "a": {"foo": "${value}"},
+                        "b": [1, "${value}"],
+                    },
+                    "b": None,
+                },
+            },
+            SimpleDataClass(a={"foo": 99}, b=[1, 99]),
+            id="simple",
+        ),
+    ],
+)
+def test_primitive_params_with_dataclass_obj(
+    input_: Any, expected: Any, primitive: Any, expected_primitive: bool
+):
+    # Instantiated dataclasses are never converted to primitives.
+    # This is due to the ambiguity between dataclass as an object and as
+    # an input for creating a config object (Structured Configs)
+    cfg = OmegaConf.create(input_)
+    kwargs = {"a": {"_primitive_": primitive}}
+    ret = utils.instantiate(cfg.obj, **kwargs)
+
+    assert ret.a == expected
+    # as close as it gets for dataclasses:
+    # Object is a DictConfig and the underlying type is the expected type.
+    assert isinstance(ret.a, DictConfig) and OmegaConf.get_type(ret.a) == type(expected)
+    # Since these are nested in , they are not getting converted. not the greatest behavior.
+    # Can potentially be solved if this is causing issues.
+    assert isinstance(ret.a.a, DictConfig)
+    assert isinstance(ret.a.b, ListConfig)
 
 
 @pytest.mark.parametrize(  # type: ignore

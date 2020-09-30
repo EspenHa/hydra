@@ -80,15 +80,11 @@ def instantiate(config: Any, *args: Any, **kwargs: Any) -> Any:
         final_kwargs = _get_kwargs(config, **kwargs)
         primitive = _is_primitive(final_kwargs)
         if primitive:
-            # convert OmegaConf containers to primitive containers
-            # This improves the performance of the instantiated object in some cases
-            converted = {}
-            for k, v in final_kwargs.items():
-                if OmegaConf.is_config(v):
-                    v = OmegaConf.to_container(v, resolve=True)
-                converted[k] = v
-            final_kwargs = converted
-
+            final_kwargs = OmegaConf.to_container(
+                final_kwargs,
+                resolve=True,
+                exclude_structured_configs=True,
+            )
         return target(*args, **final_kwargs)
     except Exception as e:
         raise type(e)(

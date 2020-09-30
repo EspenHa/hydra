@@ -643,21 +643,17 @@ def _get_kwargs(
 
     assert OmegaConf.is_dict(config), "Input config is not an OmegaConf DictConfig"
 
-    final_kwargs = {}
-
     recursive = _is_recursive(config, kwargs)
     overrides = OmegaConf.create(kwargs, flags={"allow_objects": True})
     config.merge_with(overrides)
 
-    for k, v in config.items():
-        final_kwargs[k] = v
-
+    final_kwargs = OmegaConf.create(flags={"allow_objects": True})
     if recursive:
-        for k, v in final_kwargs.items():
+        for k, v in config.items():
             if _is_target(v):
                 final_kwargs[k] = instantiate(v)
             elif OmegaConf.is_dict(v) and not OmegaConf.is_none(v):
-                d = OmegaConf.create({}, flags={"allow_objects": True})
+                d = {}
                 for key, value in v.items():
                     if _is_target(value):
                         d[key] = instantiate(value)
@@ -680,6 +676,9 @@ def _get_kwargs(
                 if OmegaConf.is_none(v):
                     v = None
                 final_kwargs[k] = v
+    else:
+        for k, v in config.items():
+            final_kwargs[k] = v
 
     return final_kwargs
 
