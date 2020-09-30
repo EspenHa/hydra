@@ -653,7 +653,7 @@ def _get_kwargs(
             if _is_target(v):
                 final_kwargs[k] = instantiate(v)
             elif OmegaConf.is_dict(v) and not OmegaConf.is_none(v):
-                d = {}
+                d = OmegaConf.create({}, flags={"allow_objects": True})
                 for key, value in v.items():
                     if _is_target(value):
                         d[key] = instantiate(value)
@@ -663,8 +663,6 @@ def _get_kwargs(
                         d[key] = value
                 final_kwargs[k] = d
                 # TODO:
-                # 2. consider using merge_with
-                # 3. check if something similar is needed in list handling
                 # 4. Change default to current behavior
                 final_kwargs[k]._metadata.object_type = v._metadata.object_type
             elif OmegaConf.is_list(v):
@@ -674,6 +672,7 @@ def _get_kwargs(
                         lst.append(instantiate(x))
                     elif OmegaConf.is_config(x):
                         lst.append(_get_kwargs(x))
+                        lst[-1]._metadata.object_type = x._metadata.object_type
                     else:
                         lst.append(x)
                 final_kwargs[k] = lst
@@ -685,6 +684,7 @@ def _get_kwargs(
         for k, v in config.items():
             final_kwargs[k] = v
 
+    # final_kwargs._metadata.object_type = config._metadata.object_type
     return final_kwargs
 
 

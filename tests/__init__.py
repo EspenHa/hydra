@@ -315,5 +315,5 @@ class SimpleClassDefaultPrimitiveConf:
 @dataclass
 class NestedConf:
     _target_: str = "tests.SimpleClass"
-    a: User = User(name="a", age=1)
-    b: User = User(name="b", age=2)
+    a: Any = User(name="a", age=1)
+    b: Any = User(name="b", age=2)

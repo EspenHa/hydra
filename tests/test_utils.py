@@ -1026,9 +1026,19 @@ def test_primitive_in_config(input_: Any, is_primitive: bool, expected: Any) -> 
 
 
 def test_nested_dataclass_with_primitive():
-    cfg = OmegaConf.create(NestedConf)
+    # dict
+    cfg = OmegaConf.structured(NestedConf)
     ret = utils.instantiate(cfg)
     assert isinstance(ret.a, DictConfig) and OmegaConf.get_type(ret.a) == User
     assert isinstance(ret.b, DictConfig) and OmegaConf.get_type(ret.b) == User
     expected = SimpleClass(a=User(name="a", age=1), b=User(name="b", age=2))
+    assert ret == expected
+
+    # list
+    lst = [User(name="a", age=1)]
+    cfg = OmegaConf.structured(NestedConf(a=lst))
+    ret = utils.instantiate(cfg)
+    assert isinstance(ret.a, list) and OmegaConf.get_type(ret.a[0]) == User
+    assert isinstance(ret.b, DictConfig) and OmegaConf.get_type(ret.b) == User
+    expected = SimpleClass(a=lst, b=User(name="b", age=2))
     assert ret == expected
