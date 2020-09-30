@@ -29,6 +29,7 @@ from tests import (
     IllegalType,
     Mapping,
     MappingConf,
+    NestedConf,
     NestingClass,
     Parameters,
     Rotation,
@@ -42,9 +43,8 @@ from tests import (
     TreeConf,
     UntypedPassthroughClass,
     UntypedPassthroughConf,
-    module_function,
-    NestedConf,
     User,
+    module_function,
 )
 
 
