@@ -10,7 +10,7 @@ from traceback import print_exc, print_exception
 from types import FrameType
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
-from omegaconf import DictConfig, ListConfig, OmegaConf, read_write
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from omegaconf._utils import type_str
 from omegaconf.errors import OmegaConfBaseException
 
@@ -649,44 +649,47 @@ def _get_kwargs(
 
     final_kwargs = OmegaConf.create(flags={"allow_objects": True})
     final_kwargs._set_parent(config._get_parent())
-    with read_write(final_kwargs):
-        if recursive:
-            for k, v in config.items_ex(resolve=False):
-                if _is_target(v):
-                    final_kwargs[k] = instantiate(v)
-                elif OmegaConf.is_dict(v) and not OmegaConf.is_none(v):
-                    d = OmegaConf.create({}, flags={"allow_objects": True})
-                    for key, value in v.items_ex(resolve=False):
-                        if _is_target(value):
-                            d[key] = instantiate(value)
-                        elif OmegaConf.is_config(value):
-                            d[key] = _get_kwargs(value)
-                        else:
-                            d[key] = value
-                    final_kwargs[k] = d
-                    # TODO:
-                    # 4. Change default to current behavior
-                    final_kwargs[k]._metadata.object_type = v._metadata.object_type
-                elif OmegaConf.is_list(v):
-                    lst = OmegaConf.create([], flags={"allow_objects": True})
-                    for x in v:
-                        if _is_target(x):
-                            lst.append(instantiate(x))
-                        elif OmegaConf.is_config(x):
-                            lst.append(_get_kwargs(x))
-                            lst[-1]._metadata.object_type = x._metadata.object_type
-                        else:
-                            lst.append(x)
-                    final_kwargs[k] = lst
-                else:
-                    if OmegaConf.is_none(v):
-                        v = None
-                    final_kwargs[k] = v
-        else:
-            for k, v in config.items_ex(resolve=False):
+    final_kwargs._set_flag("readonly", False)
+    final_kwargs._set_flag("struct", False)
+    if recursive:
+        for k, v in config.items_ex(resolve=False):
+            if _is_target(v):
+                final_kwargs[k] = instantiate(v)
+            elif OmegaConf.is_dict(v) and not OmegaConf.is_none(v):
+                d = OmegaConf.create({}, flags={"allow_objects": True})
+                for key, value in v.items_ex(resolve=False):
+                    if _is_target(value):
+                        d[key] = instantiate(value)
+                    elif OmegaConf.is_config(value):
+                        d[key] = _get_kwargs(value)
+                    else:
+                        d[key] = value
+                final_kwargs[k] = d
+                # TODO:
+                # 4. Change default to current behavior
+                final_kwargs[k]._metadata.object_type = v._metadata.object_type
+            elif OmegaConf.is_list(v):
+                lst = OmegaConf.create([], flags={"allow_objects": True})
+                for x in v:
+                    if _is_target(x):
+                        lst.append(instantiate(x))
+                    elif OmegaConf.is_config(x):
+                        lst.append(_get_kwargs(x))
+                        lst[-1]._metadata.object_type = x._metadata.object_type
+                    else:
+                        lst.append(x)
+                final_kwargs[k] = lst
+            else:
+                if OmegaConf.is_none(v):
+                    v = None
                 final_kwargs[k] = v
+    else:
+        for k, v in config.items_ex(resolve=False):
+            final_kwargs[k] = v
 
-    # final_kwargs._metadata.object_type = config._metadata.object_type
+    final_kwargs._set_flag("readonly", None)
+    final_kwargs._set_flag("struct", None)
+    final_kwargs._set_flag("allow_objects", None)
     return final_kwargs
 
 
