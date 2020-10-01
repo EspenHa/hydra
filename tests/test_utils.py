@@ -832,7 +832,7 @@ def test_convert_target_to_string(input_: Any, expected: Any) -> None:
 @pytest.mark.parametrize(  # type: ignore
     "primitive,expected_primitive",
     [
-        pytest.param(None, True, id="primitive=unspecified"),
+        pytest.param(None, False, id="primitive=unspecified"),
         pytest.param(False, False, id="primitive=false"),
         pytest.param(True, True, id="primitive=true"),
     ],
@@ -907,7 +907,7 @@ def test_primitive_params_override(
 @pytest.mark.parametrize(  # type: ignore
     "primitive,expected_primitive",
     [
-        pytest.param(None, True, id="p=unspecified"),
+        pytest.param(None, False, id="p=unspecified"),
         pytest.param(False, False, id="p=false"),
         pytest.param(True, True, id="p=true"),
     ],
@@ -1035,7 +1035,7 @@ def test_primitive_params_with_dataclass_obj(
                     a={"foo": "${value}"}, b=[1, "${value}"]
                 ),
             },
-            True,
+            False,
             SimpleClass(a={"foo": 99}, b=[1, 99]),
             id="default_behavior",
         ),
@@ -1057,7 +1057,7 @@ def test_primitive_in_config(input_: Any, is_primitive: bool, expected: Any) -> 
 def test_nested_dataclass_with_primitive() -> None:
     # dict
     cfg = OmegaConf.structured(NestedConf)
-    ret = utils.instantiate(cfg)
+    ret = utils.instantiate(cfg, _primitive_=True)
     assert isinstance(ret.a, DictConfig) and OmegaConf.get_type(ret.a) == User
     assert isinstance(ret.b, DictConfig) and OmegaConf.get_type(ret.b) == User
     expected = SimpleClass(a=User(name="a", age=1), b=User(name="b", age=2))
@@ -1066,7 +1066,7 @@ def test_nested_dataclass_with_primitive() -> None:
     # list
     lst = [User(name="a", age=1)]
     cfg = OmegaConf.structured(NestedConf(a=lst))
-    ret = utils.instantiate(cfg)
+    ret = utils.instantiate(cfg, _primitive_=True)
     assert isinstance(ret.a, list) and OmegaConf.get_type(ret.a[0]) == User
     assert isinstance(ret.b, DictConfig) and OmegaConf.get_type(ret.b) == User
     expected = SimpleClass(a=lst, b=User(name="b", age=2))
