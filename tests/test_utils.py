@@ -906,7 +906,7 @@ def test_primitive_params_override(
 
 @pytest.mark.parametrize(  # type: ignore
     "primitive,expected_primitive",
-    [
+    [  # type: ignore
         pytest.param(None, False, id="p=unspecified"),
         pytest.param(False, False, id="p=false"),
         pytest.param(True, True, id="p=true"),
@@ -956,7 +956,7 @@ def test_primitive_params(
 
 @pytest.mark.parametrize(  # type: ignore
     "primitive,expected_primitive",
-    [
+    [  # type: ignore
         pytest.param(None, True, id="p=unspecified"),
         pytest.param(False, False, id="p=false"),
         pytest.param(True, True, id="p=true"),
