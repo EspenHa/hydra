@@ -10,7 +10,7 @@ from traceback import print_exc, print_exception
 from types import FrameType
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
-from omegaconf import DictConfig, ListConfig, OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf, open_dict
 from omegaconf._utils import type_str
 from omegaconf.errors import OmegaConfBaseException
 
@@ -615,18 +615,27 @@ def _get_target_type(config: Any, kwargs: Any) -> Union[type, Callable[..., Any]
 
 
 def _is_primitive(d: Any) -> bool:
+    # TODO:
+    # use :
+    # _convert_:
+    # <unspecified> / none : Current behavior, use DictConfig/ListConfig as is.
+    # partial : convert the OmegaConf config to primitive container, Structured Configs are preserved as is
+    # all: convert the OmegaConf config to primitive containers (dict, list and primitives).
+    # document in instantiation page
     ret = False
     if "_primitive_" in d:
-        ret = d.pop("_primitive_")
-        if ret is not None and not isinstance(ret, bool):
-            raise InstantiationException(
-                f"_primitive_ must be a bool (got `{type(ret).__name__}`)"
-            )
+        with open_dict(d):
+            ret = d.pop("_primitive_")
+            if ret is not None and not isinstance(ret, bool):
+                raise InstantiationException(
+                    f"_primitive_ must be a bool (got `{type(ret).__name__}`)"
+                )
     return ret
 
 
 def _get_kwargs(
     config: Union[DictConfig, ListConfig],
+    root: bool = True,
     **kwargs: Any,
 ) -> Any:
     from hydra.utils import instantiate
@@ -635,7 +644,9 @@ def _get_kwargs(
 
     if OmegaConf.is_list(config):
         assert isinstance(config, ListConfig)
-        return [_get_kwargs(x) if OmegaConf.is_config(x) else x for x in config]
+        return [
+            _get_kwargs(x, root=False) if OmegaConf.is_config(x) else x for x in config
+        ]
 
     assert OmegaConf.is_dict(config), "Input config is not an OmegaConf DictConfig"
 
@@ -657,18 +668,18 @@ def _get_kwargs(
                     if _is_target(value):
                         d[key] = instantiate(value)
                     elif OmegaConf.is_config(value):
-                        d[key] = _get_kwargs(value)
+                        d[key] = _get_kwargs(value, root=False)
                     else:
                         d[key] = value
+                d._metadata.object_type = v._metadata.object_type
                 final_kwargs[k] = d
-                final_kwargs[k]._metadata.object_type = v._metadata.object_type
             elif OmegaConf.is_list(v):
                 lst = OmegaConf.create([], flags={"allow_objects": True})
                 for x in v:
                     if _is_target(x):
                         lst.append(instantiate(x))
                     elif OmegaConf.is_config(x):
-                        lst.append(_get_kwargs(x))
+                        lst.append(_get_kwargs(x, root=False))
                         lst[-1]._metadata.object_type = x._metadata.object_type
                     else:
                         lst.append(x)
@@ -684,6 +695,11 @@ def _get_kwargs(
     final_kwargs._set_flag("readonly", None)
     final_kwargs._set_flag("struct", None)
     final_kwargs._set_flag("allow_objects", None)
+    if not root:
+        # This is tricky, since the root kwargs is exploded anyway we can treat is as an untyped dict
+        # the motivation is that the object type is used as an indicator to treat the object differently during
+        # conversion to a primitive container in some cases
+        final_kwargs._metadata.object_type = config._metadata.object_type
     return final_kwargs
 
 

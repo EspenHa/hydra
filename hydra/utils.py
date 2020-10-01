@@ -105,7 +105,6 @@ def get_class(path: str) -> type:
             raise ValueError(f"Located non-class in {path} : {type(cls).__name__}")
         return cls
     except Exception as e:
-        # TODO: preserve backtrace
         log.error(f"Error initializing class at {path} : {e}")
         raise e
 
@@ -117,7 +116,6 @@ def get_method(path: str) -> Callable[..., Any]:
             raise ValueError(f"Non callable object located : {type(cl).__name__}")
         return cl
     except Exception as e:
-        # TODO: preserve backtrace
         log.error(f"Error getting callable at {path} : {e}")
         raise e
 

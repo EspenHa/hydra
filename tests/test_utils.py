@@ -2,11 +2,12 @@
 import copy
 import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
-from omegaconf import DictConfig, ListConfig, OmegaConf
+from omegaconf import MISSING, DictConfig, ListConfig, OmegaConf
 
 from hydra import utils
 from hydra._internal.utils import _convert_container_targets_to_strings
@@ -251,7 +252,6 @@ def test_class_instantiate_omegaconf_node() -> Any:
     conf = OmegaConf.structured(
         {
             "_target_": "tests.AClass",
-            "_primitive_": False,  # TODO, ideally default will continue to work for this.
             "b": 200,
             "c": {"x": 10, "y": "${b}"},
         }
@@ -1071,3 +1071,37 @@ def test_nested_dataclass_with_primitive() -> None:
     assert isinstance(ret.b, DictConfig) and OmegaConf.get_type(ret.b) == User
     expected = SimpleClass(a=lst, b=User(name="b", age=2))
     assert ret == expected
+
+
+class DictValues:
+    def __init__(self, d: Dict[str, User]):
+        self.d = d
+
+
+class ListValues:
+    def __init__(self, d: List[User]):
+        self.d = d
+
+
+def test_dict_with_structured_config() -> None:
+    @dataclass
+    class DictValuesConf:
+        _target_: str = "tests.test_utils.DictValues"
+        d: Dict[str, User] = MISSING
+
+    schema = OmegaConf.structured(DictValuesConf)
+    cfg = OmegaConf.merge(schema, {"d": {"007": {"name": "Bond", "age": 7}}})
+    obj = utils.instantiate(config=cfg, _primitive_=True)
+    assert OmegaConf.get_type(obj.d["007"]) == User
+
+
+def test_list_with_structured_config() -> None:
+    @dataclass
+    class ListValuesConf:
+        _target_: str = "tests.test_utils.ListValues"
+        d: List[User] = MISSING
+
+    schema = OmegaConf.structured(ListValuesConf)
+    cfg = OmegaConf.merge(schema, {"d": [{"name": "Bond", "age": 7}]})
+    obj = utils.instantiate(config=cfg, _primitive_=True)
+    assert OmegaConf.get_type(obj.d[0]) == User
